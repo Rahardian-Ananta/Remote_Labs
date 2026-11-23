@@ -9,9 +9,8 @@ Panduan ini disusun untuk memudahkan rekan tim atau penguji menjalankan proyek i
 Saat berkas proyek ini dibagikan ke teman atau dipindahkan ke komputer baru, mereka **TIDAK PERLU** menginstal dependensi secara manual. Sistem sudah dilengkapi skrip otomatisasi penuh.
 
 ### Prasyarat Sistem
-- **Sistem Operasi:** Windows 10/11, Linux (Ubuntu/Debian), atau macOS.
+- **Sistem Operasi:** Windows 10/11.
 - **Python:** *Opsional / Otomatis!* Jika di komputer belum ada Python atau terpasang versi yang tidak kompatibel (seperti Python 3.14+), skrip setup otomatis mengunduh **Python 3.12 mandiri (terisolasi khusus proyek ini)** tanpa mengotori sistem global dan tanpa hak Administrator.
-- *(Opsional)* **Docker & Docker Compose** jika ingin menjalankan via container.
 
 ---
 
@@ -26,7 +25,6 @@ Saat berkas proyek ini dibagikan ke teman atau dipindahkan ke komputer baru, mer
   2. Jalankan skrip setup:
      ```powershell
      .\setup.bat
-     # atau: .\setup.ps1
      ```
    *Skrip ini akan secara otomatis:*
    - Mendeteksi interpreter Python di sistem.
@@ -35,41 +33,17 @@ Saat berkas proyek ini dibagikan ke teman atau dipindahkan ke komputer baru, mer
    - Memverifikasi integritas paket dan membuat folder data `run_data`.
 
 > [!TIP]
-> **Bahkan lebih mudah:** Jika teman Anda langsung menjalankan `.\scripts\run_local.ps1`, skrip akan mendeteksi bahwa `.venv` belum ada dan **otomatis menjalankan `setup.ps1` terlebih dahulu**, lalu langsung menyalakan klaster!
+> **Bahkan lebih mudah:** Jika teman Anda langsung menjalankan `.\scripts\run_local.ps1`, skrip akan mendeteksi jika `.venv` belum ada dan **otomatis menjalankan `setup.bat` terlebih dahulu**, lalu langsung menyalakan klaster!
 
 ---
 
-### Cara 2: Setup Otomatis di Linux / macOS (Bash)
-
-1. Buka terminal di folder `remotelab`:
-   ```bash
-   chmod +x setup.sh scripts/*.sh
-   ./setup.sh
-   ```
-2. Untuk langsung menjalankan klaster:
-   ```bash
-   ./scripts/run_local.sh
-   ```
-
----
-
-### Cara 3: Menjalankan via Docker Compose (Multi-Container)
-
-Jika di komputer penguji sudah terpasang Docker Desktop:
-```bash
-docker compose up --build
-```
-*Ini akan otomatis menyalakan 1 Scheduler dan 3 Executor dalam container Linux lengkap dengan environment OpenMPI.*
-
----
-
-### Cara 4: Setup Skenario 4 Laptop Terpisah (4 Anggota Kelompok)
+### Cara 2: Setup Skenario 4 Laptop Terpisah (4 Anggota Kelompok)
 
 Jika kelompok Anda membawa 4 laptop terpisah ke ruang presentasi:
 1. Hubungkan seluruh 4 laptop ke **1 hotspot Wi-Fi yang sama**.
 2. Cek IP masing-masing laptop via `ipconfig` (misal: Laptop 1: `192.168.43.10`, Laptop 2: `192.168.43.11`, Laptop 3: `192.168.43.12`, Laptop 4: `192.168.43.13`).
-3. **Laptop 2, 3, 4 (Worker):** Jalankan `.\scripts\run_cluster_executor.ps1` lalu pilih peran 1, 2, atau 3.
-4. **Laptop 1 (Master):** Jalankan `.\scripts\run_cluster_scheduler.ps1` dan ketikkan IP Laptop 2, 3, dan 4 saat diminta.
+3. **Laptop 2, 3, 4 (Worker):** Jalankan `.\scripts\run_cluster_executor.ps1` (atau `run_executor.bat`) lalu pilih peran 1, 2, atau 3.
+4. **Laptop 1 (Master):** Jalankan `.\scripts\run_cluster_scheduler.ps1` (atau `run_scheduler.bat`) dan ketikkan IP Laptop 2, 3, dan 4 saat diminta.
 5. Buka dashboard di browser Laptop 1: `http://192.168.43.10:8000`.
 
 ---
@@ -133,11 +107,11 @@ flowchart LR
 
 ### Langkah 4: Tunjukkan Laporan Benchmark & Pengujian Unit
 Buka atau tampilkan dokumen laporan resmi yang telah digenerate:
-1. **Laporan Benchmark Empiris:** [`docs/BENCHMARK.md`](file:///c:/Users/ASUS/OneDrive/ドキュメント/Sistem%20Terdistribusi/tugas%20akhir/remotelab/docs/BENCHMARK.md)
+1. **Laporan Benchmark Empiris:** [`docs/BENCHMARK.md`](BENCHMARK.md)
    - Tunjukkan metrik **Speedup Paralel 1.82× – 3.19×** pada 30 job paralel.
    - Tunjukkan latensi Cache Hit **~4 ms** (target kriteria $<100\text{ ms}$).
    - Tunjukkan rata-rata hop Chord **1.33 hop** (batas teoretis $\le 2\text{ hop}$).
-2. **Laporan Pengujian Otomatis:** [`docs/TEST_REPORT.md`](file:///c:/Users/ASUS/OneDrive/ドキュメント/Sistem%20Terdistribusi/tugas%20akhir/remotelab/docs/TEST_REPORT.md)
+2. **Laporan Pengujian Otomatis:** [`docs/TEST_REPORT.md`](TEST_REPORT.md)
    - Tunjukkan bukti eksekusi `pytest`: **24 passed, 3 skipped, 0 failed (100% Pass Rate)**.
    - Tunjukkan 10 skenario integrasi klaster semuanya **PASSED**.
 
@@ -170,11 +144,12 @@ Berikut contekan jawaban teknis jika dosen penguji menanyakan hal-hal mendalam s
 ## Ringkasan Perintah Penting (Quick Cheat-Sheet)
 
 ```powershell
-# 1. Setup otomatis pertama kali
-.\setup.ps1
+# 1. Setup otomatis pertama kali (klik ganda setup.bat atau jalankan di terminal)
+.\setup.bat
 
 # 2. Jalankan klaster lokal
 .\scripts\run_local.ps1
+# (atau klik ganda run_local.bat)
 
 # 3. Jalankan demo visual 7 skenario
 .\.venv\Scripts\python.exe scripts\demo.py

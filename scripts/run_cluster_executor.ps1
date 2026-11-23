@@ -1,4 +1,4 @@
-﻿# scripts/run_cluster_executor.ps1
+# scripts/run_cluster_executor.ps1
 # ─────────────────────────────────────────────────────────────────────────────
 # Menjalankan Node Executor untuk skenario Multi-PC (4 Laptop).
 # Dijalankan di Laptop 2, Laptop 3, atau Laptop 4.

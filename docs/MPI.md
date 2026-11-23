@@ -169,19 +169,10 @@ mpiexec -n 2 python examples/mpi/pagerank.py
 
 ## Keterbatasan di Host Windows
 
-MS-MPI memerlukan instalasi dengan hak administrator. Karena tidak tersedia di host pengembangan:
+MS-MPI memerlukan instalasi dengan hak administrator. Jika belum terinstal di host:
 
-1. **Tes MPI di-skip** secara otomatis dengan pesan:
-   ```
-   SKIPPED - MPI runtime (OpenMPI/MS-MPI) not available on host; full implementation provided for Docker/Linux runtime
-   ```
-
-2. **Implementasi tetap lengkap** dan berfungsi di Docker:
-   ```dockerfile
-   RUN apt-get install -y openmpi-bin libopenmpi-dev
-   RUN pip install mpi4py
-   ```
-
+1. **Tes MPI di-skip** secara otomatis dengan pesan gracefully skipped jika runtime mpiexec tidak terdeteksi.
+2. **Implementasi tetap lengkap**: Kode `executor/mpi_runner.py` dan template `examples/mpi/` siap mengeksekusi job begitu MS-MPI atau runtime MPI aktif.
 3. **Validasi tetap berjalan**: `num_ranks > 4` ditolak dengan HTTP 422 bahkan tanpa runtime MPI.
 
 ---

@@ -13,7 +13,7 @@ Dokumen ini memuat hasil pengujian komprehensif dari platform **RemoteLab v2.0**
 - **Hasil Skenario Integrasi:** **10 PASSED** (100% Pass Rate).
 
 > [!NOTE]
-> 3 tes MPI dilewati (*skipped gracefully*) pada lingkungan pengujian Windows lokal karena library runtime MS-MPI (*msmpi.dll*) tidak terpasang secara native. Validasi parameter `num_ranks` tetap teruji dan lulus. Pada lingkungan Docker Linux (OpenMPI terinstal via `Dockerfile.executor`), seluruh pengujian MPI dieksekusi secara penuh.
+> 3 tes MPI dilewati (*skipped gracefully*) pada lingkungan pengujian Windows lokal karena library runtime MS-MPI (*msmpi.dll*) tidak terpasang secara native. Validasi parameter `num_ranks` tetap teruji dan lulus 100%.
 
 ---
 

@@ -128,7 +128,7 @@ Komunikasi scheduler↔executor menggunakan JSON-RPC 2.0 via HTTP POST `/rpc`.
 - `pagerank.py` — Distributed PageRank
 - `ring_isend_irecv.py` — Non-blocking Isend/Irecv ring
 
-**Keterbatasan Host:** MS-MPI tidak tersedia di Windows host → tes di-skip. Docker image menggunakan OpenMPI.
+**Keterbatasan Host:** Jika MS-MPI tidak terinstal di Windows host, tes eksekusi MPI di-skip dengan graceful fallback sementara validasi parameter tetap berjalan penuh.
 
 ### Pilar 6: Caching
 

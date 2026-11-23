@@ -11,10 +11,9 @@ Dokumen ini mencatat semua asumsi dan keputusan desain yang dibuat selama implem
 **Implikasi:**
 - Implementasi MPI lengkap tersedia di `executor/mpi_runner.py` dan `examples/mpi/`.
 - Fungsi `is_mpi_available()` memeriksa ketersediaan runtime MPI saat startup.
-- Tes MPI (`test_mpi.py` scenario 6) di-skip secara otomatis dengan pesan dokumentasi.
-- Pada Docker dengan image Linux + OpenMPI, semua tes MPI berjalan penuh.
+- Tes MPI (`test_mpi.py` scenario 6) di-skip secara otomatis dengan pesan dokumentasi jika runtime belum terpasang.
 
-**Alasan:** Menginstall MS-MPI di Windows memerlukan hak administrator (UAC). Lingkungan CI/CD menggunakan Linux dengan OpenMPI.
+**Alasan:** Menginstall MS-MPI di Windows memerlukan hak administrator (UAC). Validasi parameter dan arsitektur tetap diuji penuh.
 
 ---
 
@@ -109,8 +108,7 @@ Dokumen ini mencatat semua asumsi dan keputusan desain yang dibuat selama implem
 
 ## 9. Batasan Diketahui
 
-1. **MS-MPI**: Tidak tersedia di Windows host → tes MPI di-skip.
-2. **Docker**: Tidak tersedia di host → `docker-compose.yml` divalidasi via `docker compose config`.
-3. **Skala Ring**: Diuji dengan N=3 node; algoritma Chord bekerja untuk N berapapun.
-4. **Persistensi Cache**: Cache hilang saat scheduler restart (in-memory). DHT menyimpan indeks ke disk via executor SQLite.
-5. **MPI Multi-node**: Implementasi menggunakan `mpiexec` pada satu host; distribusi antar-host memerlukan shared filesystem.
+1. **MS-MPI**: Memerlukan instalasi terpisah di Windows host → tes eksekusi MPI di-skip otomatis jika runtime belum aktif.
+2. **Skala Ring**: Diuji dengan N=3 node; algoritma Chord bekerja untuk N berapapun.
+3. **Persistensi Cache**: Cache in-memory scheduler reset saat restart; DHT menyimpan indeks ke disk via executor SQLite.
+4. **MPI Multi-node**: Implementasi menggunakan `mpiexec` pada satu host; distribusi antar-host memerlukan shared filesystem atau hostfile.

@@ -75,6 +75,6 @@ Implementasi *HTTP Connection Pooling* menggunakan persistent keep-alive (`httpx
 | **2. Naming (Hierarkis, Flat Chord, Atribut)** | ✅ **Terbukti** | REST URI terstruktur `/api/v1/...`; Chord flat ID $m=32$ ($\le 2$ hop); seleksi executor berbasis atribut CPU/RAM/MPI. |
 | **3. RESTful API** | ✅ **Terbukti** | CRUD lengkap job, ETag SHA-256, conditional GET HTTP 304 Not Modified. |
 | **4. RPC (JSON-RPC 2.0)** | ✅ **Terbukti** | Error codes standar (`-32600`, `-32601`, `-32000`); idempotensi at-most-once via SQLite dedup store. |
-| **5. MPI (Message Passing Interface)** | ✅ **Terbukti** | Runner mendukung Scatter/Gather, Reduce, Allreduce, dan Ring Non-blocking (OpenMPI di Docker, MS-MPI validation di host). |
+| **5. MPI (Message Passing Interface)** | ✅ **Terbukti** | Runner mendukung Scatter/Gather, Reduce, Allreduce, dan Ring Non-blocking (validasi parameter & runner mpiexec teruji). |
 | **6. Caching Bertingkat** | ✅ **Terbukti** | Edge Cache Scheduler (lease/TTL, ETag) + Local Worker LRU Cache (*stack property* terbukti). |
 

@@ -32,19 +32,9 @@ RemoteLab v2.0 adalah platform eksekusi kode terdistribusi berbasis **Hybrid Mas
 ```powershell
 # 1. Jalankan setup otomatis (membuat .venv & install dependensi otomatis)
 .\setup.bat
-# (atau: .\setup.ps1)
 
 # 2. Jalankan klaster lokal (1 Scheduler :8000 + 3 Executor :9001-:9003)
 .\scripts\run_local.ps1
-```
-
-**Di Linux / macOS (Bash):**
-```bash
-# 1. Jalankan setup otomatis
-chmod +x setup.sh && ./setup.sh
-
-# 2. Jalankan klaster lokal
-./scripts/run_local.sh
 ```
 
 ### Cara 2: Setup Manual
@@ -54,23 +44,17 @@ chmod +x setup.sh && ./setup.sh
 cd remotelab
 python -m venv .venv
 
-# 2. Aktifkan venv dan instal seluruh dependensi
-# Windows PowerShell:
+# 2. Aktifkan venv dan instal seluruh dependensi (Windows PowerShell):
 .venv\Scripts\Activate.ps1; pip install -r requirements.txt
-# Linux/macOS:
-source .venv/bin/activate && pip install -r requirements.txt
 
 # 3. Jalankan pengujian otomatis (pytest)
 pytest -q
 
 # 4. Jalankan kluster lokal (1 Scheduler :8000 + 3 Executor :9001-:9003)
-# Windows PowerShell:
 .\scripts\run_local.ps1
-# Linux/macOS:
-bash scripts/run_local.sh
 
 # 5. Jalankan demonstrasi end-to-end (di terminal terpisah)
-python scripts/demo.py
+python scripts\demo.py
 ```
 
 Setelah kluster berjalan, buka dashboard web di: **`http://localhost:8000`**
@@ -142,8 +126,9 @@ remotelab/
 ├── scripts/                    # Skrip operasional
 │   ├── benchmark.py            # Script pengukuran throughput, cache, hops
 │   ├── demo.py                 # Skrip demonstrasi 10 skenario
-│   ├── run_local.ps1           # Peluncur lokal PowerShell (Windows)
-│   └── run_local.sh            # Peluncur lokal Bash (Linux/macOS)
+│   ├── run_cluster_executor.ps1 # Peluncur node worker klaster multi-laptop
+│   ├── run_cluster_scheduler.ps1# Peluncur master scheduler klaster multi-laptop
+│   └── run_local.ps1           # Peluncur lokal PowerShell (Windows)
 ├── tests/                      # Rangkaian pengujian otomatis pytest
 │   ├── conftest.py             # Fixture live cluster & managed subprocess
 │   ├── test_api.py             # Tes REST API & conditional GET
@@ -166,13 +151,11 @@ remotelab/
 │   ├── PANDUAN_SETUP_DAN_PRESENTASI.md # Panduan setup otomatis & cheat-sheet presentasi
 │   ├── RPC_SPEC.md             # Spesifikasi protokol JSON-RPC 2.0
 │   └── TEST_REPORT.md          # Laporan eksekusi pengujian pytest
-├── Dockerfile.executor         # Container build untuk Executor (OpenMPI)
-├── Dockerfile.scheduler        # Container build untuk Scheduler
-├── docker-compose.yml          # Konfigurasi orkestrasi 1 Sched + 3 Exec
-├── setup.bat                   # Launcher setup 1-klik untuk Windows Explorer
-├── setup.ps1                   # Skrip setup otomatis PowerShell (Windows)
-├── setup.sh                    # Skrip setup otomatis Bash (Linux/macOS)
-├── pytest.ini                  # Konfigurasi pytest (asyncio_mode=auto)
+├── run_executor.bat            # Launcher cepat Executor untuk Windows
+├── run_local.bat               # Launcher cepat klaster lokal untuk Windows
+├── run_scheduler.bat           # Launcher cepat Scheduler untuk Windows
+├── setup.bat                   # Launcher setup mandiri 1-klik (Polyglot Bat + PS1)
+├── preview_colab.html          # UI interaktif bertema Google Colab (Standalone demo)
 └── requirements.txt            # Daftar pustaka Python yang dibutuhkan
 ```
 
@@ -251,7 +234,6 @@ Buka peramban ke **`http://localhost:8000`**. Dashboard menyediakan antarmuka in
    - Pustaka `mpi4py` dan runner MPI `executor/mpi_runner.py` diimplementasikan secara penuh.
    - Pada host Windows pengembangan, `msmpi.dll` memerlukan instalasi Microsoft MPI dengan hak administrator (UAC).
    - Pengujian unit MPI (`tests/test_mpi.py`) mendeteksi ketersediaan runtime via `is_mpi_available()`. Jika tidak ada runtime sistem, pengujian eksekusi akan di-skip dengan dokumentasi yang jelas, sementara validasi parameter (seperti batasan `num_ranks <= 4`) tetap diuji dan lulus.
-   - Pada lingkungan kontainer Linux (`Dockerfile.executor` / Docker Compose), OpenMPI dipasang secara otomatis sehingga seluruh pengujian MPI dapat berjalan penuh.
 2. **Isolasi Proses**:
    - Di lingkungan Windows, proses executor diisolasi menggunakan flag OS `subprocess.CREATE_NEW_PROCESS_GROUP` dan pohon proses dimatikan menggunakan `psutil`.
    - Di lingkungan Linux, isolasi menggunakan session ID terpisah (`os.setsid`).

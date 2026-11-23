@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RemoteLab v2.0 — Distributed Execution Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+      padding: 1.5rem;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    header .status-pill {
+      font-size: 0.85rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      background: #064e3b;
+      color: #6ee7b7;
+      font-weight: 600;
+    }
+    .grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; }
+    @media (max-width: 1024px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .card h2 {
+      font-size: 1.15rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.5rem;
+    }
+    label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem; }
+    input, select, textarea {
+      width: 100%;
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: 0.375rem;
+      color: var(--text);
+      padding: 0.5rem;
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+      font-family: inherit;
+    }
+    textarea { font-family: var(--font-mono); resize: vertical; min-height: 220px; }
+    input:focus, select:focus, textarea:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+    .row { display: flex; gap: 0.75rem; }
+    .col { flex: 1; }
+    .checkbox-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; cursor: pointer; }
+    .checkbox-row input { width: auto; margin: 0; }
+    .btn-group { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    button {
+      background: var(--border);
+      color: var(--text);
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover { background: #475569; }
+    button.primary { background: var(--accent); color: #0f172a; }
+    button.primary:hover { background: var(--accent-hover); }
+    button.small { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+    pre {
+      background: #090d16;
+      border: 1px solid var(--border);
+      padding: 0.75rem;
+      border-radius: 0.375rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      overflow-x: auto;
+      max-height: 280px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-weight: 600; }
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-success { background: #064e3b; color: #6ee7b7; }
+    .badge-running { background: #1e3a8a; color: #93c5fd; }
+    .badge-queued { background: #78350f; color: #fde68a; }
+    .badge-failed { background: #7f1d1d; color: #fca5a5; }
+    .badge-unavailable { background: #374151; color: #9ca3af; }
+    .meta-tag {
+      background: #334155;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      margin-right: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>RemoteLab v2.0</h1>
+      <p style="font-size: 0.85rem; color: var(--text-muted);">Sistem Eksekusi Kode Paralel & Terdistribusi (6 Pilar)</p>
+    </div>
+    <div style="display: flex; gap: 1rem; align-items: center;">
+      <span id="cache-stats" style="font-size: 0.8rem; color: var(--accent);">Cache Hit: 0%</span>
+      <span class="status-pill" id="scheduler-status">SCHEDULER ONLINE</span>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Left Column: Code Editor & Submission -->
+    <div>
+      <div class="card">
+        <h2>
+          <span>Kirim Pekerjaan (Job Submission)</span>
+          <span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">Master-Slave REST + RPC</span>
+        </h2>
+
+        <div class="btn-group">
+          <span style="font-size: 0.8rem; color: var(--text-muted); align-self: center;">Contoh MPI:</span>
+          <button type="button" class="small" onclick="loadExample('sum')">1. Parallel Sum</button>
+          <button type="button" class="small" onclick="loadExample('pagerank')">2. PageRank</button>
+          <button type="button" class="small" onclick="loadExample('ring')">3. Ring Isend/Irecv</button>
+          <button type="button" class="small" onclick="loadExample('python')">Reset Python</button>
+        </div>
+
+        <form id="job-form" onsubmit="submitJob(event)">
+          <div class="row">
+            <div class="col">
+              <label for="job_type">Tipe Job</label>
+              <select id="job_type" onchange="toggleMpiFields()">
+                <option value="python">Python 3 (Standard Sandbox)</option>
+                <option value="mpi">MPI Parallel (mpi4py)</option>
+              </select>
+            </div>
+            <div class="col" id="ranks-container" style="display: none;">
+              <label for="num_ranks">Jumlah Ranks (1–4)</label>
+              <input type="number" id="num_ranks" min="1" max="4" value="2">
+            </div>
+            <div class="col">
+              <label for="timeout_sec">Batas Waktu (Detik)</label>
+              <input type="number" id="timeout_sec" min="1" max="30" value="10">
+            </div>
+          </div>
+
+          <label for="tags">Tags (Pemisah koma untuk Inverted Index Chord)</label>
+          <input type="text" id="tags" placeholder="e.g. mpi, benchmark, matrix, scientific">
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="cache" checked>
+            <span>Aktifkan Deterministic Result Caching (Opt-In)</span>
+          </label>
+
+          <label for="source_code">Kode Program</label>
+          <textarea id="source_code" placeholder="Tulis kode Python di sini...">print("Hello from RemoteLab v2.0 Distributed System!")</textarea>
+
+          <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" onclick="clearEditor()">Bersihkan</button>
+            <button type="submit" class="primary" id="btn-run">Jalankan Pekerjaan (Run Job)</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Result Panel -->
+      <div class="card" id="result-card">
+        <h2>
+          <span>Hasil Eksekusi</span>
+          <span id="result-badge" class="badge badge-queued" style="display: none;">QUEUED</span>
+        </h2>
+        <div id="result-meta" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+          Pilih atau jalankan pekerjaan untuk melihat keluaran.
+        </div>
+        <pre id="result-stdout">Output stdout akan tampil di sini...</pre>
+        <div id="result-stderr-container" style="margin-top: 0.75rem; display: none;">
+          <label style="color: var(--danger);">Standard Error / Traceback:</label>
+          <pre id="result-stderr" style="color: #fca5a5; border-color: #7f1d1d;"></pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Executors, Ring Chord, Search & Job List -->
+    <div>
+      <!-- Search Panel -->
+      <div class="card">
+        <h2>
+          <span>Pencarian Terdistribusi (Chord Inverted Index)</span>
+          <span style="font-size: 0.8rem; font-weight: normal; color: var(--accent);">Chord DHT</span>
+        </h2>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="search-query" placeholder="Cari kata kunci (e.g. parallel, pagerank, matrix)..." style="margin-bottom: 0;">
+          <button type="button" class="primary" onclick="searchJobs()">Cari</button>
+        </div>
+        <div id="search-results" style="margin-top: 0.75rem; font-size: 0.85rem;"></div>
+      </div>
+
+      <!-- Executor Nodes & Chord Ring Table -->
+      <div class="card">
+        <h2>
+          <span>Daftar Simpul Executor (Ring Chord DHT)</span>
+          <button type="button" class="small" onclick="loadExecutors()">Segarkan</button>
+        </h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID Simpul</th>
+              <th>Chord ID</th>
+              <th>Status</th>
+              <th>Beban / Kapasitas</th>
+              <th>Atribut</th>
+            </tr>
+          </thead>
+          <tbody id="executors-table-body">
+            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat data executor...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Recent Jobs Table -->
+      <div class="card">
+        <h2>
+          <span>Antrean & Riwayat Job Terbaru</span>
+          <button type="button" class="small" onclick="loadJobs()">Segarkan</button>
+        </h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Job ID</th>
+              <th>Tipe</th>
+              <th>Status</th>
+              <th>Durasi</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="jobs-table-body">
+            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Memuat antrean job...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const MPI_EXAMPLES = {
+      sum: `import numpy as np
+from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+N = 100_000
+
+if rank == 0:
+    data = np.arange(1, N + 1, dtype=np.int64)
+    chunks = np.array_split(data, size)
+else:
+    chunks = None
+
+local_chunk = comm.scatter(chunks, root=0)
+local_sum = int(np.sum(local_chunk))
+total_sum = comm.reduce(local_sum, op=MPI.SUM, root=0)
+
+if rank == 0:
+    seq_sum = int(np.sum(data))
+    print(f"[Rank 0] Parallel Sum: {total_sum}")
+    print(f"[Rank 0] Sequential Sum: {seq_sum}")
+    print(f"[Rank 0] Verification: SUCCESS (Ranks = {size})")`,
+
+      pagerank: `import numpy as np
+from mpi4py import MPI
+
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+NUM_NODES = 120
+DAMPING = 0.85
+MAX_ITER = 25
+
+rng = np.random.default_rng(seed=42)
+if rank == 0:
+    adj = rng.binomial(1, 0.08, size=(NUM_NODES, NUM_NODES)).astype(np.float64)
+    for i in range(NUM_NODES):
+        s = adj[i].sum()
+        adj[i] = adj[i] / s if s > 0 else 1.0 / NUM_NODES
+    trans = adj.T
+    chunks = np.array_split(trans, size, axis=0)
+else:
+    chunks = None
+
+local_mat = comm.scatter(chunks, root=0)
+p = np.full(NUM_NODES, 1.0 / NUM_NODES, dtype=np.float64)
+
+for it in range(MAX_ITER):
+    p = comm.bcast(p, root=0)
+    local_p = DAMPING * np.dot(local_mat, p) + ((1.0 - DAMPING) / NUM_NODES) * (local_mat.shape[0] / NUM_NODES)
+    gathered = comm.gather(local_p, root=0)
+    if rank == 0:
+        p = np.concatenate(gathered)
+        p = p / np.sum(p)
+
+if rank == 0:
+    print(f"[Rank 0] PageRank completed {MAX_ITER} iterations on {size} ranks.")
+    print(f"[Rank 0] Top 3 node indices: {np.argsort(p)[-3:][::-1].tolist()}")
+    print("[Rank 0] Verification: SUCCESS")`,
+
+      ring: `from mpi4py import MPI
+comm = MPI.COMM_WORLD
+rank = comm.Get_rank()
+size = comm.Get_size()
+
+left = (rank - 1) % size
+right = (rank + 1) % size
+token_out = (rank + 1) * 10
+received = []
+
+for r in range(4):
+    req_r = comm.irecv(source=left, tag=50 + r)
+    req_s = comm.isend(token_out, dest=right, tag=50 + r)
+    MPI.Request.Waitall([req_r, req_s])
+    tok = req_r.wait()
+    received.append(tok)
+    token_out = tok + 1
+
+hist = comm.gather(received, root=0)
+if rank == 0:
+    print(f"[Rank 0] Completed 4 non-blocking ring rounds across {size} ranks.")
+    for idx, h in enumerate(hist):
+        print(f"[Rank 0] Rank {idx} tokens: {h}")
+    print("[Rank 0] Verification: SUCCESS (No deadlock)")`
+    };
+
+    function toggleMpiFields() {
+      const type = document.getElementById("job_type").value;
+      document.getElementById("ranks-container").style.display = type === "mpi" ? "block" : "none";
+    }
+
+    function loadExample(kind) {
+      if (kind === "python") {
+        document.getElementById("job_type").value = "python";
+        document.getElementById("tags").value = "test, demo";
+        document.getElementById("source_code").value = 'print("Hello from RemoteLab v2.0 Distributed System!")';
+      } else {
+        document.getElementById("job_type").value = "mpi";
+        document.getElementById("tags").value = `mpi, ${kind}`;
+        document.getElementById("source_code").value = MPI_EXAMPLES[kind] || "";
+      }
+      toggleMpiFields();
+    }
+
+    function clearEditor() {
+      document.getElementById("source_code").value = "";
+    }
+
+    async function submitJob(e) {
+      e.preventDefault();
+      const btn = document.getElementById("btn-run");
+      btn.disabled = true;
+      btn.innerText = "Mengirim...";
+
+      const job_type = document.getElementById("job_type").value;
+      const num_ranks = job_type === "mpi" ? parseInt(document.getElementById("num_ranks").value) : null;
+      const timeout_sec = parseInt(document.getElementById("timeout_sec").value);
+      const cache = document.getElementById("cache").checked;
+      const tagsRaw = document.getElementById("tags").value;
+      const tags = tagsRaw.split(",").map(t => t.strip ? t.strip() : t.trim()).filter(Boolean);
+      const source_code = document.getElementById("source_code").value;
+
+      try {
+        const resp = await fetch("/api/v1/jobs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ job_type, num_ranks, timeout_sec, cache, tags, source_code })
+        });
+        const data = await resp.json();
+
+        if (data.from_cache) {
+          displayResult(data.result || data);
+        } else {
+          pollJobResult(data.job_id);
+        }
+        loadJobs();
+      } catch (err) {
+        alert("Gagal mengirim job: " + err);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Jalankan Pekerjaan (Run Job)";
+      }
+    }
+
+    async function pollJobResult(jobId) {
+      const resultMeta = document.getElementById("result-meta");
+      const badge = document.getElementById("result-badge");
+      badge.style.display = "inline-block";
+      badge.className = "badge badge-running";
+      badge.innerText = "RUNNING";
+      resultMeta.innerText = `Menunggu hasil eksekusi untuk Job: ${jobId}...`;
+
+      let attempts = 0;
+      const interval = setInterval(async () => {
+        attempts++;
+        try {
+          const resp = await fetch(`/api/v1/jobs/${jobId}`);
+          if (resp.status === 200) {
+            const data = await resp.json();
+            if (data.status !== "QUEUED" && data.status !== "RUNNING") {
+              clearInterval(interval);
+              displayResult(data);
+              loadJobs();
+            } else {
+              badge.className = data.status === "QUEUED" ? "badge badge-queued" : "badge badge-running";
+              badge.innerText = data.status;
+            }
+          }
+        } catch (e) {
+          console.error("Polling error:", e);
+        }
+        if (attempts > 60) clearInterval(interval);
+      }, 800);
+    }
+
+    function displayResult(job) {
+      const badge = document.getElementById("result-badge");
+      badge.style.display = "inline-block";
+      badge.className = `badge badge-${(job.status || "failed").toLowerCase()}`;
+      badge.innerText = job.status;
+
+      const meta = document.getElementById("result-meta");
+      const fromCacheText = job.from_cache ? " [SERVED FROM EDGE CACHE]" : "";
+      meta.innerHTML = `
+        <strong>ID:</strong> ${job.job_id} |
+        <strong>Durasi:</strong> ${job.duration_ms || 0} ms |
+        <strong>Exit Code:</strong> ${job.exit_code !== undefined ? job.exit_code : -1} |
+        <strong>Executor:</strong> ${job.executor_id || "Cache/DHT"} ${fromCacheText}
+      `;
+
+      let stdout = job.preview || "";
+      let stderr = "";
+      if (job.full_result) {
+        stdout = job.full_result.stdout || stdout;
+        stderr = job.full_result.stderr || "";
+      }
+
+      document.getElementById("result-stdout").innerText = stdout || "(Tidak ada output stdout)";
+      const stderrContainer = document.getElementById("result-stderr-container");
+      if (stderr) {
+        stderrContainer.style.display = "block";
+        document.getElementById("result-stderr").innerText = stderr;
+      } else {
+        stderrContainer.style.display = "none";
+      }
+    }
+
+    async function loadExecutors() {
+      try {
+        const resp = await fetch("/api/v1/executors");
+        const data = await resp.json();
+        const tbody = document.getElementById("executors-table-body");
+        tbody.innerHTML = "";
+        data.executors.forEach(e => {
+          const tr = document.createElement("tr");
+          const statusClass = e.status === "HEALTHY" ? "badge-success" : (e.status === "BUSY" ? "badge-running" : "badge-unavailable");
+          tr.innerHTML = `
+            <td><strong>${e.executor_id}</strong><br><span style="font-size: 0.75rem; color: var(--text-muted);">${e.url}</span></td>
+            <td><code style="font-size: 0.75rem; color: var(--accent);">${e.chord_id}</code></td>
+            <td><span class="badge ${statusClass}">${e.status}</span></td>
+            <td>${e.running_jobs} / ${e.capacity}</td>
+            <td style="font-size: 0.75rem;">mpi=${e.attributes.mpi}, ranks≤${e.attributes.max_ranks}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Failed to load executors:", err);
+      }
+    }
+
+    async function loadJobs() {
+      try {
+        const resp = await fetch("/api/v1/jobs?limit=10");
+        const data = await resp.json();
+        const tbody = document.getElementById("jobs-table-body");
+        tbody.innerHTML = "";
+        data.jobs.forEach(j => {
+          const tr = document.createElement("tr");
+          const badgeClass = `badge badge-${j.status.toLowerCase()}`;
+          tr.innerHTML = `
+            <td><a href="javascript:void(0)" onclick="fetchAndDisplayJob('${j.job_id}')" style="color: var(--accent); text-decoration: none;">${j.job_id.substring(0, 8)}...</a></td>
+            <td>${j.job_type}</td>
+            <td><span class="${badgeClass}">${j.status}</span></td>
+            <td>${j.duration_ms ? j.duration_ms + ' ms' : '-'}</td>
+            <td><button class="small" onclick="deleteJob('${j.job_id}')">Hapus</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Failed to load jobs:", err);
+      }
+    }
+
+    async function fetchAndDisplayJob(jobId) {
+      try {
+        const resp = await fetch(`/api/v1/jobs/${jobId}`);
+        const data = await resp.json();
+        displayResult(data);
+      } catch (e) {
+        alert("Gagal memuat job: " + e);
+      }
+    }
+
+    async function deleteJob(jobId) {
+      if (!confirm("Batalkan atau hapus job ini?")) return;
+      try {
+        await fetch(`/api/v1/jobs/${jobId}`, { method: "DELETE" });
+        loadJobs();
+      } catch (e) {
+        alert("Gagal menghapus job: " + e);
+      }
+    }
+
+    async function searchJobs() {
+      const q = document.getElementById("search-query").value.trim();
+      if (!q) return;
+      const resContainer = document.getElementById("search-results");
+      resContainer.innerHTML = "Mencari di Chord DHT Inverted Index...";
+
+      try {
+        const resp = await fetch(`/api/v1/search?q=${encodeURIComponent(q)}`);
+        const data = await resp.json();
+        if (data.matches.length === 0) {
+          resContainer.innerHTML = `<span style="color: var(--text-muted);">Tidak ditemukan hasil untuk "${q}".</span>`;
+          return;
+        }
+        resContainer.innerHTML = data.matches.map(m => `
+          <div style="background: #090d16; padding: 0.5rem; border-radius: 4px; margin-bottom: 0.5rem; border: 1px solid var(--border);">
+            <div style="display: flex; justify-content: space-between;">
+              <a href="javascript:void(0)" onclick="fetchAndDisplayJob('${m.job_id}')" style="color: var(--accent); font-weight: 600;">${m.job_id}</a>
+              <span class="badge badge-${m.status.toLowerCase()}">${m.status}</span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">${m.preview || '(tanpa preview)'}</div>
+          </div>
+        `).join("");
+      } catch (err) {
+        resContainer.innerHTML = `<span style="color: var(--danger);">Gagal mencari: ${err}</span>`;
+      }
+    }
+
+    async function refreshHealthAndCache() {
+      try {
+        const resp = await fetch("/api/v1/health");
+        const data = await resp.json();
+        const stats = data.cache;
+        const total = (stats.hits || 0) + (stats.misses || 0);
+        const ratio = total > 0 ? Math.round((stats.hits / total) * 100) : 0;
+        document.getElementById("cache-stats").innerText = `Edge Cache Hit: ${ratio}% (H: ${stats.hits}, M: ${stats.misses})`;
+      } catch (e) {}
+    }
+
+    // Auto-refresh loops (Polling Real-Time Cepat < 1 detik)
+    loadExecutors();
+    loadJobs();
+    refreshHealthAndCache();
+    setInterval(loadExecutors, 800);
+    setInterval(loadJobs, 1000);
+    setInterval(refreshHealthAndCache, 1200);
+  </script>
+</body>
+</html>
+

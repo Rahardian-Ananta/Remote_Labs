@@ -1,4 +1,4 @@
-﻿# scripts/run_cluster_scheduler.ps1
+# scripts/run_cluster_scheduler.ps1
 # ─────────────────────────────────────────────────────────────────────────────
 # Menjalankan Scheduler (Master) untuk skenario Multi-PC (4 Laptop).
 # Dijalankan di Laptop 1 (Koordinator).
