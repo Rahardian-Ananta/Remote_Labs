@@ -44,7 +44,7 @@ class SchedulerConfig(BaseModel):
         )
     )
     scheduling_policy: str = Field(default_factory=lambda: os.getenv("SCHEDULING_POLICY", "least_loaded").lower())
-    health_interval_sec: float = Field(default_factory=lambda: float(os.getenv("HEALTH_INTERVAL_SEC", "2.0")))
+    health_interval_sec: float = Field(default_factory=lambda: float(os.getenv("HEALTH_INTERVAL_SEC", "0.5")))
     db_path: str = Field(default_factory=lambda: os.getenv("DB_PATH", "scheduler.db"))
     cache_capacity: int = Field(default_factory=lambda: int(os.getenv("CACHE_CAPACITY", "100")))
     cache_lease_sec: float = Field(default_factory=lambda: float(os.getenv("CACHE_LEASE_SEC", "30.0")))

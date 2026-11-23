@@ -72,7 +72,7 @@ class SchedulerRPCClient:
         return data.get("result")
 
     async def ping(self, executor_url: str, request_id: Optional[str] = None) -> PingResult:
-        res = await self._post(executor_url, "ping", {}, read_timeout_sec=2.0, connect_timeout_override=1.0, request_id=request_id)
+        res = await self._post(executor_url, "ping", {}, read_timeout_sec=0.8, connect_timeout_override=0.5, request_id=request_id)
         return PingResult(**res)
 
     async def execute_code(

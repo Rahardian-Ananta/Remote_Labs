@@ -17,7 +17,7 @@ class HealthMonitor:
         self,
         registry: ExecutorRegistry,
         rpc_client: SchedulerRPCClient,
-        interval_sec: float = 2.0,
+        interval_sec: float = 0.5,
     ):
         self.registry = registry
         self.rpc_client = rpc_client

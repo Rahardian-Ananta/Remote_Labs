@@ -84,12 +84,12 @@ class ExecutorRegistry:
                 rec.last_seen = datetime.now(timezone.utc).isoformat()
                 rec.consecutive_failures = 0
 
-    def update_ping_failure(self, executor_id: str) -> None:
+    def update_ping_failure(self, executor_id: str, max_strikes: int = 1) -> None:
         with self._lock:
             if executor_id in self._executors:
                 rec = self._executors[executor_id]
                 rec.consecutive_failures += 1
-                if rec.consecutive_failures >= 3:
+                if rec.consecutive_failures >= max_strikes:
                     rec.status = ExecutorHealthStatus.UNAVAILABLE
 
     def select_executor(

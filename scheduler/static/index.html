@@ -587,12 +587,13 @@ if rank == 0:
       } catch (e) {}
     }
 
-    // Auto-refresh loops
+    // Auto-refresh loops (Polling Real-Time Cepat < 1 detik)
     loadExecutors();
     loadJobs();
     refreshHealthAndCache();
-    setInterval(loadExecutors, 3000);
-    setInterval(refreshHealthAndCache, 3000);
+    setInterval(loadExecutors, 800);
+    setInterval(loadJobs, 1000);
+    setInterval(refreshHealthAndCache, 1200);
   </script>
 </body>
 </html>
