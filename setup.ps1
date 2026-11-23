@@ -9,10 +9,43 @@ Write-Host ""
 $ProjectRoot = $PSScriptRoot
 Set-Location $ProjectRoot
 
-# 1. Deteksi Interpreter Python (Prioritaskan versi stabil 3.11 - 3.13 yang punya wheel lengkap)
+$VenvDir    = Join-Path $ProjectRoot ".venv"
+$VenvPython = Join-Path $VenvDir "Scripts\python.exe"
+$VenvPip    = Join-Path $VenvDir "Scripts\pip.exe"
+$ToolsDir   = Join-Path $ProjectRoot ".tools"
+$UvExe      = Join-Path $ToolsDir "uv.exe"
+
+function Ensure-UvPortable {
+    if (Test-Path $UvExe) { return $UvExe }
+    Write-Host "   Mengunduh engine instalasi portabel mandiri (uv)..." -ForegroundColor Yellow
+    if (-not (Test-Path $ToolsDir)) { New-Item -ItemType Directory -Path $ToolsDir -Force | Out-Null }
+    $uvZip = Join-Path $ToolsDir "uv.zip"
+    $uvUrl = "https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-pc-windows-msvc.zip"
+    
+    if (Get-Command "curl.exe" -ErrorAction SilentlyContinue) {
+        & curl.exe -sSL -o $uvZip $uvUrl
+    } else {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Invoke-WebRequest -Uri $uvUrl -OutFile $uvZip -UseBasicParsing
+    }
+    
+    if (Get-Command "tar.exe" -ErrorAction SilentlyContinue) {
+        & tar.exe -xf $uvZip -C $ToolsDir
+    } else {
+        Expand-Archive -Path $uvZip -DestinationPath $ToolsDir -Force
+    }
+    
+    Remove-Item $uvZip -Force -ErrorAction SilentlyContinue
+    if (Test-Path $UvExe) {
+        Write-Host "   Engine portabel siap." -ForegroundColor Green
+        return $UvExe
+    }
+    throw "Gagal mengunduh engine portabel."
+}
+
+# 1. Deteksi Interpreter Python Lokal
 Write-Host "[1/5] Memeriksa interpreter Python..." -ForegroundColor Yellow
 $PythonCmd = $null
-$tooNewPython = $null
 $candidates = @("py -3.12", "py -3.11", "py -3.13", "py -3.10", "py -3", "python", "python3")
 foreach ($cmd in $candidates) {
     try {
@@ -23,38 +56,24 @@ foreach ($cmd in $candidates) {
         if ($LASTEXITCODE -eq 0 -and $verStr -match "Python (\d+)\.(\d+)") {
             $major = [int]$Matches[1]
             $minor = [int]$Matches[2]
+            # Hanya gunakan jika versi stabil 3.10 - 3.13 (Python 3.14+ bermasalah tanpa C++ compiler)
             if ($major -eq 3 -and $minor -ge 10 -and $minor -le 13) {
                 $PythonCmd = $cmd
-                Write-Host "   Ditemukan $verStr menggunakan '$cmd'" -ForegroundColor Green
+                Write-Host "   Ditemukan $verStr kompatibel di sistem menggunakan '$cmd'" -ForegroundColor Green
                 break
-            } elseif ($major -eq 3 -and $minor -gt 13 -and -not $tooNewPython) {
-                $tooNewPython = "$verStr (menggunakan '$cmd')"
             }
         }
-    } catch {
-        # lanjut ke kandidat berikutnya
-    }
+    } catch { }
 }
 
+$usePortable = $false
 if (-not $PythonCmd) {
-    if ($tooNewPython) {
-        Write-Host "GAGAL: Terdeteksi $tooNewPython!" -ForegroundColor Red
-        Write-Host "Versi Python 3.14+ terlalu baru. Ekosistem (NumPy, Pydantic, psutil) belum menyediakan binary wheel Windows untuk versi ini, sehingga instalasi gagal tanpa C++ compiler." -ForegroundColor Yellow
-        Write-Host "Solusi: Silakan unduh dan pasang Python 3.12 (64-bit) dari:" -ForegroundColor Cyan
-        Write-Host "   https://www.python.org/downloads/release/python-3128/" -ForegroundColor Cyan
-        Write-Host "Pastikan mencentang 'Add python.exe to PATH' saat instalasi." -ForegroundColor DarkYellow
-    } else {
-        Write-Host "GAGAL: Python 3.10 - 3.13 tidak ditemukan!" -ForegroundColor Red
-        Write-Host "Silakan pasang Python 3.12 dari https://www.python.org/downloads/release/python-3128/" -ForegroundColor Red
-    }
-    exit 1
+    Write-Host "   Python 3.10-3.13 tidak ditemukan / versi global terlalu baru (3.14+)." -ForegroundColor Yellow
+    Write-Host "   Mengaktifkan mode Mandiri: Python 3.12 terisolasi akan diunduh otomatis khusus proyek ini..." -ForegroundColor Cyan
+    $usePortable = $true
 }
 
-# 2. Virtual Environment (.venv) - Validasi & Buat Ulang Jika Rusak / Bawaan PC Lain / Beda Versi
-$VenvDir = Join-Path $ProjectRoot ".venv"
-$VenvPython = Join-Path $VenvDir "Scripts\python.exe"
-$VenvPip = Join-Path $VenvDir "Scripts\pip.exe"
-
+# 2. Virtual Environment (.venv) - Validasi & Buat Ulang Jika Rusak / Beda Versi
 Write-Host ""
 Write-Host "[2/5] Menyiapkan Virtual Environment (.venv)..." -ForegroundColor Yellow
 
@@ -67,9 +86,9 @@ if (Test-Path $VenvPython) {
             $vMin = [int]$Matches[2]
             if ($vMaj -eq 3 -and $vMin -ge 10 -and $vMin -le 13) {
                 $needCreateVenv = $false
-                Write-Host "   Virtual environment valid ($vStr) dan siap digunakan di .venv" -ForegroundColor Green
+                Write-Host "   Virtual environment valid ($vStr) siap digunakan di .venv" -ForegroundColor Green
             } else {
-                Write-Host "   Terdeteksi .venv menggunakan $vStr (versi tidak didukung/bermasalah). Membuat ulang..." -ForegroundColor DarkYellow
+                Write-Host "   .venv lama ($vStr) tidak kompatibel (misal Python 3.14+). Membuat ulang..." -ForegroundColor DarkYellow
                 $needCreateVenv = $true
             }
         }
@@ -83,35 +102,54 @@ if (Test-Path $VenvPython) {
 }
 
 if ($needCreateVenv) {
-    Write-Host "   Membuat direktori .venv baru..." -ForegroundColor Gray
-    $parts = $PythonCmd.Split(" ")
-    $exe = $parts[0]
-    $args = if ($parts.Length -gt 1) { $parts[1..($parts.Length-1)] + @("-m", "venv", ".venv") } else { @("-m", "venv", ".venv") }
-    & $exe $args
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Gagal membuat virtual environment!" -ForegroundColor Red
+    if ($usePortable) {
+        $uv = Ensure-UvPortable
+        Write-Host "   Menyiapkan Python 3.12 mandiri ke dalam .venv..." -ForegroundColor Gray
+        & $uv venv --python 3.12 $VenvDir
+    } else {
+        Write-Host "   Membuat direktori .venv menggunakan Python lokal ($PythonCmd)..." -ForegroundColor Gray
+        $parts = $PythonCmd.Split(" ")
+        $exe = $parts[0]
+        $args = if ($parts.Length -gt 1) { $parts[1..($parts.Length-1)] + @("-m", "venv", ".venv") } else { @("-m", "venv", ".venv") }
+        & $exe $args
+    }
+
+    if (-not (Test-Path $VenvPython)) {
+        Write-Host "GAGAL membuat virtual environment!" -ForegroundColor Red
         exit 1
     }
     Write-Host "   Virtual environment berhasil dibuat di .venv" -ForegroundColor Green
 }
 
-# 3. Upgrade pip & Install requirements
+# 3. Install requirements
 Write-Host ""
 Write-Host "[3/5] Menginstal dependensi dari requirements.txt..." -ForegroundColor Yellow
-& $VenvPython -m pip install --upgrade pip --quiet
 $ReqFile = Join-Path $ProjectRoot "requirements.txt"
-if (Test-Path $ReqFile) {
-    Write-Host "   Memasang paket (FastAPI, Uvicorn, Pydantic, HTTPX, Pytest, NumPy)..." -ForegroundColor Gray
-    & $VenvPip install -r $ReqFile --quiet
+if (-not (Test-Path $ReqFile)) {
+    Write-Host "File requirements.txt tidak ditemukan!" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "   Memasang paket (FastAPI, Uvicorn, Pydantic, HTTPX, Pytest, NumPy, MPI4Py)..." -ForegroundColor Gray
+
+if ($usePortable -or (Test-Path $UvExe)) {
+    $uv = Ensure-UvPortable
+    & $uv pip install -r $ReqFile --python $VenvPython
+} else {
+    & $VenvPython -m pip install --upgrade pip --quiet
+    & $VenvPip install -r $ReqFile
+}
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Percobaan instalasi via pip gagal, mencoba fallback via portable engine (uv)..." -ForegroundColor DarkYellow
+    $uv = Ensure-UvPortable
+    & $uv pip install -r $ReqFile --python $VenvPython
     if ($LASTEXITCODE -ne 0) {
         Write-Host "Gagal menginstal dependensi dari requirements.txt!" -ForegroundColor Red
         exit 1
     }
-    Write-Host "   Seluruh dependensi berhasil dipasang." -ForegroundColor Green
-} else {
-    Write-Host "File requirements.txt tidak ditemukan!" -ForegroundColor Red
-    exit 1
 }
+Write-Host "   Seluruh dependensi berhasil dipasang." -ForegroundColor Green
 
 # 4. Verifikasi modul
 Write-Host ""

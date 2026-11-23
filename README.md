@@ -20,7 +20,7 @@ RemoteLab v2.0 adalah platform eksekusi kode terdistribusi berbasis **Hybrid Mas
 ## ⚡ Quickstart & Setup Otomatis 1-Klik
 
 > [!TIP]
-> **Ingin berbagi proyek ini ke teman?** Mereka cukup menjalankan **1 skrip setup otomatis** di bawah ini yang akan menyiapkan environment, memasang dependensi, dan memvalidasi sistem tanpa instalasi manual!
+> **Zero-Config untuk Semua Laptop:** Teman Anda **TIDAK PERLU menginstal Python manual secara global**! Jika laptop mereka belum punya Python atau terpasang versi yang tidak kompatibel (misal Python 3.14+), skrip setup otomatis akan mengunduh **Python 3.12 mandiri (portable & terisolasi)** khusus di dalam folder proyek ini tanpa mengubah sistem host!
 > 
 > 📖 **Lihat Panduan Lengkap:** [Panduan Setup & Presentasi (docs/PANDUAN_SETUP_DAN_PRESENTASI.md)](docs/PANDUAN_SETUP_DAN_PRESENTASI.md)
 

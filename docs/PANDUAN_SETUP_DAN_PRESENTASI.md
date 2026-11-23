@@ -10,7 +10,7 @@ Saat berkas proyek ini dibagikan ke teman atau dipindahkan ke komputer baru, mer
 
 ### Prasyarat Sistem
 - **Sistem Operasi:** Windows 10/11, Linux (Ubuntu/Debian), atau macOS.
-- **Python:** Versi **3.10** atau lebih baru terpasang di komputer (centang *"Add Python to PATH"* saat instalasi Python di Windows).
+- **Python:** *Opsional / Otomatis!* Jika di komputer belum ada Python atau terpasang versi yang tidak kompatibel (seperti Python 3.14+), skrip setup otomatis mengunduh **Python 3.12 mandiri (terisolasi khusus proyek ini)** tanpa mengotori sistem global dan tanpa hak Administrator.
 - *(Opsional)* **Docker & Docker Compose** jika ingin menjalankan via container.
 
 ---

@@ -40,22 +40,31 @@ for cmd in python3.12 python3.11 python3.13 python3.10 python3 python py; do
     fi
 done
 
+USE_PORTABLE=0
 if [ -z "$PYTHON_CMD" ]; then
-    if [ -n "$TOO_NEW_PYTHON" ]; then
-        echo -e "${RED}❌ GAGAL: Terdeteksi $TOO_NEW_PYTHON!${NC}"
-        echo -e "${YELLOW}   Python 3.14+ terlalu baru (belum memiliki binary wheel resmi untuk NumPy dll).${NC}"
-        echo -e "${YELLOW}   Silakan gunakan Python 3.11 atau 3.12.${NC}"
-    else
-        echo -e "${RED}❌ GAGAL: Python 3.10 - 3.13 tidak ditemukan!${NC}"
-        echo -e "${RED}   Silakan install python3 (versi 3.11 atau 3.12) dan python3-venv.${NC}"
-    fi
-    exit 1
+    echo -e "${YELLOW}   Python 3.10-3.13 tidak ditemukan di sistem / versi global tidak kompatibel.${NC}"
+    echo -e "${CYAN}   Mengaktifkan mode Mandiri: Mengunduh engine portabel dan Python 3.12 mandiri...${NC}"
+    USE_PORTABLE=1
 fi
 
 # 2. Virtual Environment
 echo ""
 echo -e "${YELLOW}📦 [2/5] Menyiapkan Virtual Environment (.venv)...${NC}"
-if [ ! -f ".venv/bin/python" ]; then
+if [ $USE_PORTABLE -eq 1 ]; then
+    if ! command -v uv >/dev/null 2>&1; then
+        echo "   Mengunduh engine portabel uv..."
+        curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1 || true
+        export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+    fi
+    if command -v uv >/dev/null 2>&1; then
+        echo "   Membuat virtual environment Python 3.12 mandiri via uv..."
+        uv venv --python 3.12 .venv
+    else
+        echo -e "${RED}❌ GAGAL: Tidak dapat menyiapkan Python mandiri otomatis.${NC}"
+        echo -e "${RED}   Silakan pasang python3 (versi 3.11 atau 3.12).${NC}"
+        exit 1
+    fi
+elif [ ! -f ".venv/bin/python" ]; then
     echo "   Membuat direktori .venv..."
     $PYTHON_CMD -m venv .venv
     echo -e "${GREEN}   ✅ Virtual environment berhasil dibuat di .venv${NC}"
@@ -69,10 +78,15 @@ VENV_PIP=".venv/bin/pip"
 # 3. Upgrade pip & Pasang Dependensi
 echo ""
 echo -e "${YELLOW}📥 [3/5] Menginstal dependensi dari requirements.txt...${NC}"
-$VENV_PYTHON -m pip install --upgrade pip --quiet || true
-if [ -f "requirements.txt" ]; then
-    echo "   Mengunduh dan memasang paket..."
-    $VENV_PIP install -r requirements.txt --quiet
+if command -v uv >/dev/null 2>&1; then
+    uv pip install -r requirements.txt --python "$VENV_PYTHON"
+else
+    $VENV_PYTHON -m pip install --upgrade pip --quiet || true
+    if [ -f "requirements.txt" ]; then
+        echo "   Mengunduh dan memasang paket..."
+        $VENV_PIP install -r requirements.txt --quiet
+    fi
+fi
     echo -e "${GREEN}   ✅ Seluruh dependensi berhasil dipasang.${NC}"
 else
     echo -e "${RED}❌ File requirements.txt tidak ditemukan!${NC}"
