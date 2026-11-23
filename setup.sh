@@ -24,22 +24,31 @@ cd "$PROJECT_ROOT"
 # 1. Deteksi Python
 echo -e "${YELLOW}🔍 [1/5] Memeriksa interpreter Python...${NC}"
 PYTHON_CMD=""
-for cmd in python3 python py; do
+TOO_NEW_PYTHON=""
+for cmd in python3.12 python3.11 python3.13 python3.10 python3 python py; do
     if command -v "$cmd" >/dev/null 2>&1; then
         VER=$($cmd -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || true)
         MAJOR=$(echo "$VER" | cut -d. -f1)
         MINOR=$(echo "$VER" | cut -d. -f2)
-        if [ "$MAJOR" -ge 3 ] && [ "$MINOR" -ge 10 ]; then
+        if [ "$MAJOR" -eq 3 ] && [ "$MINOR" -ge 10 ] && [ "$MINOR" -le 13 ]; then
             PYTHON_CMD="$cmd"
             echo -e "${GREEN}   ✅ Ditemukan Python $VER menggunakan '$cmd'${NC}"
             break
+        elif [ "$MAJOR" -eq 3 ] && [ "$MINOR" -gt 13 ] && [ -z "$TOO_NEW_PYTHON" ]; then
+            TOO_NEW_PYTHON="Python $VER ($cmd)"
         fi
     fi
 done
 
 if [ -z "$PYTHON_CMD" ]; then
-    echo -e "${RED}❌ GAGAL: Python 3.10 atau versi lebih baru tidak ditemukan!${NC}"
-    echo -e "${RED}   Silakan install python3 (>=3.10) dan python3-venv.${NC}"
+    if [ -n "$TOO_NEW_PYTHON" ]; then
+        echo -e "${RED}❌ GAGAL: Terdeteksi $TOO_NEW_PYTHON!${NC}"
+        echo -e "${YELLOW}   Python 3.14+ terlalu baru (belum memiliki binary wheel resmi untuk NumPy dll).${NC}"
+        echo -e "${YELLOW}   Silakan gunakan Python 3.11 atau 3.12.${NC}"
+    else
+        echo -e "${RED}❌ GAGAL: Python 3.10 - 3.13 tidak ditemukan!${NC}"
+        echo -e "${RED}   Silakan install python3 (versi 3.11 atau 3.12) dan python3-venv.${NC}"
+    fi
     exit 1
 fi
 

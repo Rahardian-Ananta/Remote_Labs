@@ -1,4 +1,4 @@
-# setup.ps1 — RemoteLab v2.0 Setup Otomatis Lingkungan Kerja (Universal Windows)
+﻿# setup.ps1 — RemoteLab v2.0 Setup Otomatis Lingkungan Kerja (Universal Windows)
 $ErrorActionPreference = "Stop"
 
 Write-Host "============================================================" -ForegroundColor Cyan
@@ -12,6 +12,7 @@ Set-Location $ProjectRoot
 # 1. Deteksi Interpreter Python (Prioritaskan versi stabil 3.11 - 3.13 yang punya wheel lengkap)
 Write-Host "[1/5] Memeriksa interpreter Python..." -ForegroundColor Yellow
 $PythonCmd = $null
+$tooNewPython = $null
 $candidates = @("py -3.12", "py -3.11", "py -3.13", "py -3.10", "py -3", "python", "python3")
 foreach ($cmd in $candidates) {
     try {
@@ -22,10 +23,12 @@ foreach ($cmd in $candidates) {
         if ($LASTEXITCODE -eq 0 -and $verStr -match "Python (\d+)\.(\d+)") {
             $major = [int]$Matches[1]
             $minor = [int]$Matches[2]
-            if ($major -ge 3 -and $minor -ge 10) {
+            if ($major -eq 3 -and $minor -ge 10 -and $minor -le 13) {
                 $PythonCmd = $cmd
                 Write-Host "   Ditemukan $verStr menggunakan '$cmd'" -ForegroundColor Green
                 break
+            } elseif ($major -eq 3 -and $minor -gt 13 -and -not $tooNewPython) {
+                $tooNewPython = "$verStr (menggunakan '$cmd')"
             }
         }
     } catch {
@@ -34,12 +37,20 @@ foreach ($cmd in $candidates) {
 }
 
 if (-not $PythonCmd) {
-    Write-Host "GAGAL: Python 3.10 atau versi lebih baru tidak ditemukan!" -ForegroundColor Red
-    Write-Host "Silakan pasang Python 3.12 dari https://www.python.org/downloads/" -ForegroundColor Red
+    if ($tooNewPython) {
+        Write-Host "GAGAL: Terdeteksi $tooNewPython!" -ForegroundColor Red
+        Write-Host "Versi Python 3.14+ terlalu baru. Ekosistem (NumPy, Pydantic, psutil) belum menyediakan binary wheel Windows untuk versi ini, sehingga instalasi gagal tanpa C++ compiler." -ForegroundColor Yellow
+        Write-Host "Solusi: Silakan unduh dan pasang Python 3.12 (64-bit) dari:" -ForegroundColor Cyan
+        Write-Host "   https://www.python.org/downloads/release/python-3128/" -ForegroundColor Cyan
+        Write-Host "Pastikan mencentang 'Add python.exe to PATH' saat instalasi." -ForegroundColor DarkYellow
+    } else {
+        Write-Host "GAGAL: Python 3.10 - 3.13 tidak ditemukan!" -ForegroundColor Red
+        Write-Host "Silakan pasang Python 3.12 dari https://www.python.org/downloads/release/python-3128/" -ForegroundColor Red
+    }
     exit 1
 }
 
-# 2. Virtual Environment (.venv) - Validasi & Buat Ulang Jika Rusak / Bawaan PC Lain
+# 2. Virtual Environment (.venv) - Validasi & Buat Ulang Jika Rusak / Bawaan PC Lain / Beda Versi
 $VenvDir = Join-Path $ProjectRoot ".venv"
 $VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 $VenvPip = Join-Path $VenvDir "Scripts\pip.exe"
@@ -50,18 +61,24 @@ Write-Host "[2/5] Menyiapkan Virtual Environment (.venv)..." -ForegroundColor Ye
 $needCreateVenv = $true
 if (Test-Path $VenvPython) {
     try {
-        $null = & $VenvPython --version 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            $needCreateVenv = $false
-            Write-Host "   Virtual environment valid dan siap digunakan di .venv" -ForegroundColor Green
+        $vStr = & $VenvPython --version 2>&1
+        if ($LASTEXITCODE -eq 0 -and $vStr -match "Python (\d+)\.(\d+)") {
+            $vMaj = [int]$Matches[1]
+            $vMin = [int]$Matches[2]
+            if ($vMaj -eq 3 -and $vMin -ge 10 -and $vMin -le 13) {
+                $needCreateVenv = $false
+                Write-Host "   Virtual environment valid ($vStr) dan siap digunakan di .venv" -ForegroundColor Green
+            } else {
+                Write-Host "   Terdeteksi .venv menggunakan $vStr (versi tidak didukung/bermasalah). Membuat ulang..." -ForegroundColor DarkYellow
+                $needCreateVenv = $true
+            }
         }
     } catch {
         $needCreateVenv = $true
     }
 
     if ($needCreateVenv) {
-        Write-Host "   Terdeteksi .venv lama/rusak dari perangkat lain. Membuat ulang..." -ForegroundColor DarkYellow
-        Remove-Item -Recurse -Force $VenvDir
+        Remove-Item -Recurse -Force $VenvDir -ErrorAction SilentlyContinue
     }
 }
 
