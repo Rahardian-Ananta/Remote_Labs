@@ -1,4 +1,4 @@
-# scripts/run_cluster_scheduler.ps1
+﻿# scripts/run_cluster_scheduler.ps1
 # ─────────────────────────────────────────────────────────────────────────────
 # Menjalankan Scheduler (Master) untuk skenario Multi-PC (4 Laptop).
 # Dijalankan di Laptop 1 (Koordinator).
@@ -21,8 +21,16 @@ Write-Host "   RemoteLab v2.0 - Scheduler Node (Laptop 1 / Master)      " -Foreg
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Dapatkan IP Lokal Laptop 1
-$LocalIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -notmatch "Loopback|vEthernet|VirtualBox" -and $_.IPAddress -notmatch "^169\.254\." } | Select-Object -First 1).IPAddress
+# Dapatkan IP Lokal Laptop 1 (utamakan Wi-Fi dan abaikan virtual adapter seperti VirtualBox 192.168.56.x)
+$wifiIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.InterfaceAlias -match "Wi-Fi|Wireless|WLAN" -and $_.IPAddress -notmatch "^(169\.254\.|192\.168\.56\.)" } | Select-Object -First 1).IPAddress
+if ($wifiIP) {
+    $LocalIP = $wifiIP
+} else {
+    $LocalIP = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { 
+        $_.InterfaceAlias -notmatch "Loopback|vEthernet|VirtualBox|VMware|Npcap" -and 
+        $_.IPAddress -notmatch "^(169\.254\.|192\.168\.56\.|127\.)" 
+    } | Select-Object -First 1).IPAddress
+}
 if (-not $LocalIP) { $LocalIP = "127.0.0.1" }
 
 Write-Host "IP Laptop Anda (Master): $LocalIP" -ForegroundColor Green
