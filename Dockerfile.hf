@@ -1,0 +1,34 @@
+# Dockerfile untuk RemoteLab Executor di Hugging Face Spaces
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install dependencies sistem termasuk OpenMPI
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openmpi-bin \
+    libopenmpi-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install dependensi Python
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Salin source code
+COPY common/ common/
+COPY executor/ executor/
+COPY examples/ examples/
+
+# Setup user non-root UID 1000 (standar Hugging Face Spaces)
+RUN useradd -m -u 1000 remotelab && chown -R remotelab:remotelab /app
+USER remotelab
+
+# Port default Hugging Face Spaces adalah 7860
+ENV EXECUTOR_HOST=0.0.0.0
+ENV EXECUTOR_PORT=7860
+ENV PORT=7860
+
+EXPOSE 7860
+
+CMD ["python", "-m", "uvicorn", "executor.main:app", "--host", "0.0.0.0", "--port", "7860", "--log-level", "info"]
+
