@@ -1,7 +1,8 @@
 @echo off
 setlocal
+set "RL_PROJECT_ROOT=%~dp0"
 set "_tmp=%TEMP%\rl_setup_%RANDOM%.ps1"
-powershell -NoProfile -Command "(Get-Content '%~f0' -Encoding UTF8 | Select-Object -Skip 9) -join \"`r`n\" | Set-Content -Path '%_tmp%' -Encoding UTF8"
+powershell -NoProfile -Command "(Get-Content '%~f0' -Encoding UTF8 | Select-Object -Skip 10) -join \"`r`n\" | Set-Content -Path '%_tmp%' -Encoding UTF8"
 powershell -NoProfile -ExecutionPolicy Bypass -File "%_tmp%"
 set _EC=%ERRORLEVEL%
 del "%_tmp%" >nul 2>&1
@@ -18,7 +19,11 @@ Write-Host "   RemoteLab v2.0 - Setup Otomatis Lingkungan Kerja         " -Foreg
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 
-$ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+if ($env:RL_PROJECT_ROOT) {
+    $ProjectRoot = $env:RL_PROJECT_ROOT.TrimEnd('\', '/')
+} else {
+    $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+}
 if (-not $ProjectRoot -or $ProjectRoot -eq "") {
     $ProjectRoot = (Get-Location).Path
 }
