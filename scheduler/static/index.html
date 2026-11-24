@@ -413,6 +413,27 @@
       border-radius: 6px;
       padding: 10px 12px;
       margin-bottom: 10px;
+      transition: all 0.2s ease;
+    }
+    .cluster-node-card.node-busy {
+      border-color: var(--colab-yellow);
+      box-shadow: 0 0 10px rgba(249, 171, 0, 0.25);
+    }
+    .node-job-info {
+      margin-top: 6px;
+      padding-top: 5px;
+      border-top: 1px dashed var(--colab-border-subtle);
+      font-size: 11.5px;
+      line-height: 1.4;
+    }
+    .spinner-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--colab-yellow);
+      margin-right: 5px;
+      animation: pulse-dot 0.8s infinite;
     }
     .node-card-header {
       display: flex;
@@ -1089,7 +1110,7 @@
           </div>
 
           <div id="cluster-nodes-container">
-            <div class="cluster-node-card">
+            <div class="cluster-node-card" id="card-exec1">
               <div class="node-card-header">
                 <span class="node-title">exec1 (Laptop Master / Local)</span>
                 <span class="status-badge healthy" id="exec1-badge">HEALTHY</span>
@@ -1098,13 +1119,18 @@
                 URL: <code>http://127.0.0.1:9001</code><br>
                 Chord ID: <code style="color: var(--colab-yellow);">0x17b3a9e2</code><br>
                 Running: <strong id="exec1-jobs">0 / 4 Jobs</strong> | Atribut: <code>mpi=true</code>
+                <div class="node-job-info" id="exec1-job-info">
+                  <div style="color: var(--colab-text-secondary);">
+                    <strong>Job Terakhir:</strong> <code>job_71ca88b1</code> <span style="color: var(--colab-green); font-weight: 500;">[SUCCESS · 12ms]</span>
+                  </div>
+                </div>
               </div>
               <div class="node-btn-row">
                 <button class="node-action-btn" onclick="pingNode('exec1', '127.0.0.1:9001')">Ping Health</button>
               </div>
             </div>
 
-            <div class="cluster-node-card">
+            <div class="cluster-node-card" id="card-exec2">
               <div class="node-card-header">
                 <span class="node-title">exec2 (Laptop Teman 1)</span>
                 <span class="status-badge healthy" id="exec2-badge">HEALTHY</span>
@@ -1112,7 +1138,12 @@
               <div class="node-details">
                 URL: <code>http://192.168.1.30:9001</code><br>
                 Chord ID: <code style="color: var(--colab-yellow);">0x8fe201c4</code><br>
-                Running: <strong id="exec2-jobs">1 / 4 Jobs</strong> | Atribut: <code>mpi=true</code>
+                Running: <strong id="exec2-jobs">0 / 4 Jobs</strong> | Atribut: <code>mpi=true</code>
+                <div class="node-job-info" id="exec2-job-info">
+                  <div style="color: var(--colab-text-secondary);">
+                    <strong>Job Terakhir:</strong> <code>job_e2910fa8</code> <span style="color: var(--colab-green); font-weight: 500;">[SUCCESS · 48ms]</span>
+                  </div>
+                </div>
               </div>
               <div class="node-btn-row">
                 <button class="node-action-btn" onclick="pingNode('exec2', '192.168.1.30:9001')">Ping Health</button>
@@ -1120,7 +1151,7 @@
               </div>
             </div>
 
-            <div class="cluster-node-card">
+            <div class="cluster-node-card" id="card-exec3">
               <div class="node-card-header">
                 <span class="node-title">exec3 (Laptop Teman 2)</span>
                 <span class="status-badge healthy" id="exec3-badge">HEALTHY</span>
@@ -1129,6 +1160,11 @@
                 URL: <code>http://192.168.1.45:9001</code><br>
                 Chord ID: <code style="color: var(--colab-yellow);">0xd4a1120e</code><br>
                 Running: <strong id="exec3-jobs">0 / 4 Jobs</strong> | Atribut: <code>mpi=true</code>
+                <div class="node-job-info" id="exec3-job-info">
+                  <div style="color: var(--colab-text-disabled);">
+                    <em>Idle (Menunggu antrean job)</em>
+                  </div>
+                </div>
               </div>
               <div class="node-btn-row">
                 <button class="node-action-btn" onclick="pingNode('exec3', '192.168.1.45:9001')">Ping Health</button>
@@ -1664,12 +1700,16 @@ Python Version: 3.12.16</div>
           if (textPre) textPre.innerText = `Job terdaftar [${jobId.substring(0, 8)}]. Menunggu antrean & eksekusi worker...`;
 
           let attempts = 0;
+          refreshClusterState();
           const pollTimer = setInterval(async () => {
             attempts++;
             try {
               const pollResp = await fetch(`/api/v1/jobs/${jobId}`);
               if (pollResp.ok) {
                 const jobData = await pollResp.json();
+                if (jobData.status === "RUNNING") {
+                  refreshClusterState();
+                }
                 if (jobData.status !== "QUEUED" && jobData.status !== "RUNNING") {
                   clearInterval(pollTimer);
                   playBtn.classList.remove('running');
@@ -1687,8 +1727,9 @@ Python Version: 3.12.16</div>
               clearInterval(pollTimer);
               playBtn.classList.remove('running');
               if (textPre) textPre.innerText = "Error: Timeout menunggu hasil job dari scheduler.";
+              refreshClusterState();
             }
-          }, 300);
+          }, 200);
 
           return;
         } catch (apiErr) {
@@ -1697,11 +1738,17 @@ Python Version: 3.12.16</div>
       }
 
       // 2. Mode Simulasi Offline (Jika dibuka langsung via file:// atau backend offline)
+      const targetNodeId = isMpi ? 'exec2' : 'exec1';
+      const simJobId = 'job_' + Math.random().toString(16).substring(2, 10);
+      setNodeBusyState(targetNodeId, simJobId, true);
+
       const latency = Math.floor(Math.random() * 30) + 18;
       setTimeout(() => {
         playBtn.classList.remove('running');
         if (durSpan) durSpan.innerText = latency + 'ms';
-        if (hashSpan) hashSpan.innerText = '· job_' + Math.random().toString(16).substring(2, 10);
+        if (hashSpan) hashSpan.innerText = '· ' + simJobId;
+
+        setNodeBusyState(targetNodeId, simJobId, false, latency);
 
         let simulatedStdout = '';
         if (code.includes('while True:') || code.includes('while 1:')) {
@@ -2146,6 +2193,37 @@ Python Version: 3.12.16</div>
       }, 300);
     }
 
+    // Set status visual sibuk/idle pada kartu node
+    function setNodeBusyState(nodeId, jobId, isBusy, latency = 0) {
+      const jobsEl = document.getElementById(nodeId + '-jobs');
+      const jobInfoEl = document.getElementById(nodeId + '-job-info');
+      const cardEl = document.getElementById('card-' + nodeId) || (jobsEl ? jobsEl.closest('.cluster-node-card') : null);
+
+      if (isBusy) {
+        if (cardEl) cardEl.classList.add('node-busy');
+        if (jobsEl) jobsEl.innerHTML = `<span style="color: var(--colab-yellow);">1 / 4 Jobs (RUNNING)</span>`;
+        if (jobInfoEl) {
+          jobInfoEl.innerHTML = `
+            <div style="color: var(--colab-yellow);">
+              <span class="spinner-dot"></span>
+              <strong>Aktif:</strong> <code>${jobId}</code>
+            </div>
+          `;
+        }
+      } else {
+        if (cardEl) cardEl.classList.remove('node-busy');
+        if (jobsEl) jobsEl.innerHTML = `0 / 4 Jobs`;
+        if (jobInfoEl) {
+          jobInfoEl.innerHTML = `
+            <div style="color: var(--colab-text-secondary);">
+              <strong>Job Terakhir:</strong> <code>${jobId}</code>
+              <span style="color: var(--colab-green); font-weight: 500;">[SUCCESS · ${latency}ms]</span>
+            </div>
+          `;
+        }
+      }
+    }
+
     // Refresh daftar Node Executor nyata dari Scheduler
     async function refreshClusterState() {
       if (!window.location.protocol.startsWith('http')) return;
@@ -2160,8 +2238,35 @@ Python Version: 3.12.16</div>
         data.executors.forEach(e => {
           const isHealthy = e.status === "HEALTHY";
           const statusClass = isHealthy ? "healthy" : "unavailable";
+          const isBusy = (e.running_jobs > 0) || (e.active_jobs && e.active_jobs.length > 0);
+
+          let jobInfoHtml = '';
+          if (isBusy) {
+            const activeId = (e.active_jobs && e.active_jobs.length > 0) ? e.active_jobs[0] : (e.last_job_id || 'Memproses...');
+            jobInfoHtml = `
+              <div class="node-job-info" id="${e.executor_id}-job-info" style="color: var(--colab-yellow);">
+                <span class="spinner-dot"></span>
+                <strong>Aktif:</strong> <code>${activeId.substring(0, 14)}...</code>
+              </div>
+            `;
+          } else if (e.last_job_id) {
+            const stColor = e.last_job_status === 'SUCCESS' ? 'var(--colab-green)' : (e.last_job_status === 'FAILED' ? 'var(--colab-red)' : 'var(--colab-text-secondary)');
+            jobInfoHtml = `
+              <div class="node-job-info" id="${e.executor_id}-job-info" style="color: var(--colab-text-secondary);">
+                <strong>Job Terakhir:</strong> <code>${e.last_job_id.substring(0, 10)}...</code>
+                <span style="color: ${stColor}; font-weight: 500;">[${e.last_job_status || 'SELESAI'}${e.last_job_duration_ms ? ` · ${e.last_job_duration_ms}ms` : ''}]</span>
+              </div>
+            `;
+          } else {
+            jobInfoHtml = `
+              <div class="node-job-info" id="${e.executor_id}-job-info" style="color: var(--colab-text-disabled);">
+                <em>Idle (Menunggu antrean job)</em>
+              </div>
+            `;
+          }
+
           html += `
-            <div class="cluster-node-card">
+            <div class="cluster-node-card ${isBusy ? 'node-busy' : ''}" id="card-${e.executor_id}">
               <div class="node-card-header">
                 <span class="node-title">${e.executor_id}</span>
                 <span class="status-badge ${statusClass}" id="${e.executor_id}-badge">${e.status}</span>
@@ -2169,7 +2274,8 @@ Python Version: 3.12.16</div>
               <div class="node-details">
                 URL: <code>${e.url}</code><br>
                 Chord ID: <code style="color: var(--colab-yellow);">${e.chord_id}</code><br>
-                Running: <strong>${e.running_jobs} / ${e.capacity} Jobs</strong> | Atribut: <code>mpi=${e.attributes ? e.attributes.mpi : false}</code>
+                Running: <strong id="${e.executor_id}-jobs" style="color: ${isBusy ? 'var(--colab-yellow)' : 'inherit'};">${e.running_jobs} / ${e.capacity} Jobs</strong> | Atribut: <code>mpi=${e.attributes ? e.attributes.mpi : false}</code>
+                ${jobInfoHtml}
               </div>
               <div class="node-btn-row">
                 <button class="node-action-btn" onclick="pingNode('${e.executor_id}', '${e.url}')">Ping Health</button>

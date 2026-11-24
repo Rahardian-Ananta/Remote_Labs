@@ -148,6 +148,10 @@ class JobDispatcher:
         rec = self.registry.get(executor_id)
         if rec:
             rec.running_jobs += 1
+            if job.job_id not in rec.active_jobs:
+                rec.active_jobs.append(job.job_id)
+            rec.last_job_id = job.job_id
+            rec.last_job_status = "RUNNING"
 
         try:
             # Execute RPC with strict failure handling
@@ -249,4 +253,8 @@ class JobDispatcher:
         finally:
             if rec:
                 rec.running_jobs = max(0, rec.running_jobs - 1)
+                if job.job_id in rec.active_jobs:
+                    rec.active_jobs.remove(job.job_id)
+                rec.last_job_status = job.status.value if hasattr(job.status, "value") else str(job.status)
+                rec.last_job_duration_ms = job.duration_ms
 

@@ -17,6 +17,10 @@ class ExecutorRecord(BaseModel):
     chord_id: int = 0
     last_seen: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     consecutive_failures: int = 0
+    active_jobs: List[str] = Field(default_factory=list)
+    last_job_id: Optional[str] = None
+    last_job_status: Optional[str] = None
+    last_job_duration_ms: Optional[int] = None
 
 
 class ExecutorRegistry:
