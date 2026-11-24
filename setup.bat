@@ -64,7 +64,7 @@ function Ensure-UvPortable {
 }
 
 # 1. Deteksi Interpreter Python Lokal
-Write-Host "[1/5] Memeriksa interpreter Python..." -ForegroundColor Yellow
+Write-Host "[1/6] Memeriksa interpreter Python..." -ForegroundColor Yellow
 $PythonCmd = $null
 $candidates = @("py -3.12", "py -3.11", "py -3.13", "py -3.10", "py -3", "python", "python3")
 foreach ($cmd in $candidates) {
@@ -93,7 +93,7 @@ if (-not $PythonCmd) {
 
 # 2. Virtual Environment (.venv)
 Write-Host ""
-Write-Host "[2/5] Menyiapkan Virtual Environment (.venv)..." -ForegroundColor Yellow
+Write-Host "[2/6] Menyiapkan Virtual Environment (.venv)..." -ForegroundColor Yellow
 
 $needCreateVenv = $true
 if (Test-Path $VenvPython) {
@@ -136,7 +136,7 @@ if ($needCreateVenv) {
 
 # 3. Install requirements
 Write-Host ""
-Write-Host "[3/5] Menginstal dependensi dari requirements.txt..." -ForegroundColor Yellow
+Write-Host "[3/6] Menginstal dependensi dari requirements.txt..." -ForegroundColor Yellow
 $ReqFile = Join-Path $ProjectRoot "requirements.txt"
 if (-not (Test-Path $ReqFile)) {
     Write-Host "File requirements.txt tidak ditemukan!" -ForegroundColor Red
@@ -166,7 +166,7 @@ Write-Host "   Seluruh dependensi berhasil dipasang." -ForegroundColor Green
 
 # 4. Verifikasi modul
 Write-Host ""
-Write-Host "[4/5] Memverifikasi integritas paket..." -ForegroundColor Yellow
+Write-Host "[4/6] Memverifikasi integritas paket..." -ForegroundColor Yellow
 $verifyScript = "import fastapi, uvicorn, pydantic, httpx, numpy; print('OK')"
 $res = & $VenvPython -c $verifyScript 2>&1
 if ($res -match "OK") {
@@ -178,12 +178,29 @@ if ($res -match "OK") {
 
 # 5. Direktori data
 Write-Host ""
-Write-Host "[5/5] Menyiapkan direktori operasional..." -ForegroundColor Yellow
+Write-Host "[5/6] Menyiapkan direktori operasional..." -ForegroundColor Yellow
 $RunDataDir = Join-Path $ProjectRoot "run_data"
 if (-not (Test-Path $RunDataDir)) {
     New-Item -ItemType Directory -Path $RunDataDir -Force | Out-Null
 }
 Write-Host "   Direktori run_data siap." -ForegroundColor Green
+
+# 6. Install Microsoft MPI (dibutuhkan untuk mpi4py)
+Write-Host ""
+Write-Host "[6/6] Memeriksa & menginstal Microsoft MPI..." -ForegroundColor Yellow
+if (Get-Command "mpiexec" -ErrorAction SilentlyContinue) {
+    Write-Host "   Microsoft MPI (mpiexec) sudah terpasang di sistem." -ForegroundColor Green
+} elseif (Get-Command "winget" -ErrorAction SilentlyContinue) {
+    Write-Host "   Menginstal Microsoft.msmpi melalui winget..." -ForegroundColor Gray
+    & winget install --id Microsoft.msmpi -e --accept-package-agreements --accept-source-agreements
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "   Microsoft MPI berhasil dipasang." -ForegroundColor Green
+    } else {
+        Write-Host "   Peringatan: Instalasi winget selesai dengan kode $LASTEXITCODE (mungkin sudah terpasang atau butuh izin Admin)." -ForegroundColor DarkYellow
+    }
+} else {
+    Write-Host "   Peringatan: winget tidak ditemukan. Silakan instal MS-MPI secara manual." -ForegroundColor DarkYellow
+}
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
