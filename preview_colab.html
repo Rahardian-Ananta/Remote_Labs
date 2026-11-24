@@ -723,6 +723,58 @@
       font-family: var(--font-ui);
     }
 
+    .cache-switch-container {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: var(--colab-text-secondary);
+      user-select: none;
+      cursor: pointer;
+      margin-left: 6px;
+      padding: 1px 4px;
+      border-radius: 4px;
+    }
+    .cache-switch-container:hover {
+      color: var(--colab-text);
+    }
+    .colab-switch {
+      position: relative;
+      display: inline-block;
+      width: 26px;
+      height: 14px;
+    }
+    .colab-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .colab-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #555a60;
+      border-radius: 14px;
+      transition: .2s;
+    }
+    .colab-slider:before {
+      position: absolute;
+      content: "";
+      height: 10px;
+      width: 10px;
+      left: 2px;
+      bottom: 2px;
+      background-color: #ffffff;
+      border-radius: 50%;
+      transition: .2s;
+    }
+    .colab-switch input:checked + .colab-slider {
+      background-color: var(--colab-blue);
+    }
+    .colab-switch input:checked + .colab-slider:before {
+      transform: translateX(12px);
+    }
+
     .cell-quick-actions {
       display: flex;
       align-items: center;
@@ -1307,9 +1359,17 @@ Tulis program Python atau MPI paralel di bawah ini, lalu klik tombol Run pada se
             <div class="cell-config-group">
               <span style="font-weight: 500; color: var(--colab-text-secondary); font-size: 11.5px;">Runtime:</span>
               <select class="cell-dropdown" id="runtime-1">
-                <option selected>MPI (mpi4py - 4 Ranks)</option>
-                <option>Python 3.12 (Standard)</option>
+                <option selected>MPI (mpi4py)</option>
+                <option>Python</option>
               </select>
+              <label class="cache-switch-container" title="Gunakan Edge Cache jika ada hasil komputasi yang sama">
+                <span>Cache</span>
+                <span class="colab-switch">
+                  <input type="checkbox" id="cache-1" checked onchange="updateCacheLabel(this, 'cache-lbl-1')">
+                  <span class="colab-slider"></span>
+                </span>
+                <span id="cache-lbl-1" style="font-size: 10.5px; font-weight: 500; color: var(--colab-blue);">ON</span>
+              </label>
             </div>
 
             <div class="cell-quick-actions">
@@ -1330,7 +1390,7 @@ Tulis program Python atau MPI paralel di bawah ini, lalu klik tombol Run pada se
 
           <div class="cell-editor-row">
             <div class="cell-play-wrapper">
-              <button class="colab-play-button" id="play-1" onclick="runCell('cell-1', 'code-1', 'output-1', 'runtime-1')" title="Run cell (Ctrl+Enter)">
+              <button class="colab-play-button" id="play-1" onclick="runCell('cell-1', 'code-1', 'output-1', 'runtime-1', 'cache-1')" title="Run cell (Ctrl+Enter)">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
               </button>
             </div>
@@ -1399,9 +1459,17 @@ if rank == 0:
             <div class="cell-config-group">
               <span style="font-weight: 500; color: var(--colab-text-secondary); font-size: 11.5px;">Runtime:</span>
               <select class="cell-dropdown" id="runtime-2">
-                <option>MPI (mpi4py - 4 Ranks)</option>
-                <option selected>Python 3.12 (Standard)</option>
+                <option selected>Python</option>
+                <option>MPI (mpi4py)</option>
               </select>
+              <label class="cache-switch-container" title="Gunakan Edge Cache jika ada hasil komputasi yang sama">
+                <span>Cache</span>
+                <span class="colab-switch">
+                  <input type="checkbox" id="cache-2" checked onchange="updateCacheLabel(this, 'cache-lbl-2')">
+                  <span class="colab-slider"></span>
+                </span>
+                <span id="cache-lbl-2" style="font-size: 10.5px; font-weight: 500; color: var(--colab-blue);">ON</span>
+              </label>
             </div>
 
             <div class="cell-quick-actions">
@@ -1422,7 +1490,7 @@ if rank == 0:
 
           <div class="cell-editor-row">
             <div class="cell-play-wrapper">
-              <button class="colab-play-button" id="play-2" onclick="runCell('cell-2', 'code-2', 'output-2', 'runtime-2')" title="Run cell (Ctrl+Enter)">
+              <button class="colab-play-button" id="play-2" onclick="runCell('cell-2', 'code-2', 'output-2', 'runtime-2', 'cache-2')" title="Run cell (Ctrl+Enter)">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
               </button>
             </div>
@@ -1643,13 +1711,29 @@ Python Version: 3.12.16</div>
       activeFocusedElement = cellElement;
     }
 
+    // Cache label visual toggle
+    function updateCacheLabel(checkbox, labelId) {
+      const lbl = document.getElementById(labelId);
+      if (lbl) {
+        if (checkbox.checked) {
+          lbl.innerText = "ON";
+          lbl.style.color = "var(--colab-blue)";
+        } else {
+          lbl.innerText = "OFF";
+          lbl.style.color = "var(--colab-text-disabled)";
+        }
+      }
+    }
+
     // Real API Execution with Automatic Offline Simulation Fallback
-    async function runCell(cellId, codeId, outputId, runtimeId) {
+    async function runCell(cellId, codeId, outputId, runtimeId, cacheId) {
       const cell = document.getElementById(cellId);
       const playBtn = cell.querySelector('.colab-play-button');
       const code = document.getElementById(codeId).value;
       const isMpi = document.getElementById(runtimeId).value.includes('MPI');
       const outBlock = document.getElementById(outputId);
+      const cacheEl = cacheId ? document.getElementById(cacheId) : null;
+      const useCache = cacheEl ? cacheEl.checked : true;
 
       playBtn.classList.add('running');
       outBlock.style.display = 'block';
@@ -1667,7 +1751,7 @@ Python Version: 3.12.16</div>
             job_type: isMpi ? "mpi" : "python",
             num_ranks: isMpi ? 4 : 1,
             timeout_sec: 10,
-            cache: true,
+            cache: useCache,
             tags: ["colab"],
             source_code: code
           };
@@ -1864,9 +1948,17 @@ Python Version: 3.12.16</div>
           <div class="cell-config-group">
             <span style="font-weight: 500; color: var(--colab-text-secondary); font-size: 11.5px;">Runtime:</span>
             <select class="cell-dropdown" id="runtime-${id}">
-              <option selected>Python 3.12 (Standard)</option>
-              <option>MPI (mpi4py - 4 Ranks)</option>
+              <option selected>Python</option>
+              <option>MPI (mpi4py)</option>
             </select>
+            <label class="cache-switch-container" title="Gunakan Edge Cache jika ada hasil komputasi yang sama">
+              <span>Cache</span>
+              <span class="colab-switch">
+                <input type="checkbox" id="cache-${id}" checked onchange="updateCacheLabel(this, 'cache-lbl-${id}')">
+                <span class="colab-slider"></span>
+              </span>
+              <span id="cache-lbl-${id}" style="font-size: 10.5px; font-weight: 500; color: var(--colab-blue);">ON</span>
+            </label>
           </div>
           <div class="cell-quick-actions">
             <button class="action-icon-btn" onclick="moveCellUp('cell-${id}')" title="Pindahkan sel ke atas">
@@ -1885,7 +1977,7 @@ Python Version: 3.12.16</div>
         </div>
         <div class="cell-editor-row">
           <div class="cell-play-wrapper">
-            <button class="colab-play-button" id="play-${id}" onclick="runCell('cell-${id}', 'code-${id}', 'output-${id}', 'runtime-${id}')" title="Run cell (Ctrl+Enter)">
+            <button class="colab-play-button" id="play-${id}" onclick="runCell('cell-${id}', 'code-${id}', 'output-${id}', 'runtime-${id}', 'cache-${id}')" title="Run cell (Ctrl+Enter)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             </button>
           </div>
@@ -2145,16 +2237,16 @@ Python Version: 3.12.16</div>
       const linesCol = newCell.querySelector('.line-numbers-col');
 
       if (type === 'pagerank') {
-        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py - 4 Ranks)';
+        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py)';
         codeArea.value = `import numpy as np\nfrom mpi4py import MPI\n\ncomm = MPI.COMM_WORLD\nrank = comm.Get_rank()\nsize = comm.Get_size()\n\nprint(f"[Rank {rank}] Running distributed PageRank across {size} nodes")`;
       } else if (type === 'parallel_sum') {
-        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py - 4 Ranks)';
+        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py)';
         codeArea.value = `from mpi4py import MPI\nimport numpy as np\n\ncomm = MPI.COMM_WORLD\nrank = comm.Get_rank()\nsize = comm.Get_size()\n\n# Scatter-Reduce\ndata = np.arange(100) if rank == 0 else None\nlocal_data = np.zeros(25)\ncomm.Scatter(data, local_data, root=0)\nlocal_sum = np.sum(local_data)\ntotal = comm.reduce(local_sum, op=MPI.SUM, root=0)\nif rank == 0:\n    print(f"[Rank 0] Total parallel sum: {total}")`;
       } else if (type === 'ring_token') {
-        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py - 4 Ranks)';
+        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py)';
         codeArea.value = `from mpi4py import MPI\ncomm = MPI.COMM_WORLD\nrank = comm.Get_rank()\nsize = comm.Get_size()\n\n# Non-blocking ring token passing\ntoken = 42\nreq_recv = comm.irecv(source=(rank-1)%size, tag=11)\nreq_send = comm.isend(token, dest=(rank+1)%size, tag=11)\nprint(f"[Rank {rank}] Ring pass active (no deadlock)")`;
       } else if (type === 'sandbox_test') {
-        if (runtimeSel) runtimeSel.value = 'Python 3.12 (Standard)';
+        if (runtimeSel) runtimeSel.value = 'Python';
         codeArea.value = `# Uji Sandbox Timeout Protection\nimport time\nprint("Memulai proses berat...")\nwhile True:\n    pass # Akan dihentikan paksa setelah 5.0 detik`;
       }
 

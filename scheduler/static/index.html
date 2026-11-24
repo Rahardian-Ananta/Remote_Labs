@@ -1948,9 +1948,17 @@ Python Version: 3.12.16</div>
           <div class="cell-config-group">
             <span style="font-weight: 500; color: var(--colab-text-secondary); font-size: 11.5px;">Runtime:</span>
             <select class="cell-dropdown" id="runtime-${id}">
-              <option selected>Python 3.12 (Standard)</option>
-              <option>MPI (mpi4py - 4 Ranks)</option>
+              <option selected>Python</option>
+              <option>MPI (mpi4py)</option>
             </select>
+            <label class="cache-switch-container" title="Gunakan Edge Cache jika ada hasil komputasi yang sama">
+              <span>Cache</span>
+              <span class="colab-switch">
+                <input type="checkbox" id="cache-${id}" checked onchange="updateCacheLabel(this, 'cache-lbl-${id}')">
+                <span class="colab-slider"></span>
+              </span>
+              <span id="cache-lbl-${id}" style="font-size: 10.5px; font-weight: 500; color: var(--colab-blue);">ON</span>
+            </label>
           </div>
           <div class="cell-quick-actions">
             <button class="action-icon-btn" onclick="moveCellUp('cell-${id}')" title="Pindahkan sel ke atas">
@@ -1969,7 +1977,7 @@ Python Version: 3.12.16</div>
         </div>
         <div class="cell-editor-row">
           <div class="cell-play-wrapper">
-            <button class="colab-play-button" id="play-${id}" onclick="runCell('cell-${id}', 'code-${id}', 'output-${id}', 'runtime-${id}')" title="Run cell (Ctrl+Enter)">
+            <button class="colab-play-button" id="play-${id}" onclick="runCell('cell-${id}', 'code-${id}', 'output-${id}', 'runtime-${id}', 'cache-${id}')" title="Run cell (Ctrl+Enter)">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
             </button>
           </div>
@@ -2229,16 +2237,16 @@ Python Version: 3.12.16</div>
       const linesCol = newCell.querySelector('.line-numbers-col');
 
       if (type === 'pagerank') {
-        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py - 4 Ranks)';
+        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py)';
         codeArea.value = `import numpy as np\nfrom mpi4py import MPI\n\ncomm = MPI.COMM_WORLD\nrank = comm.Get_rank()\nsize = comm.Get_size()\n\nprint(f"[Rank {rank}] Running distributed PageRank across {size} nodes")`;
       } else if (type === 'parallel_sum') {
-        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py - 4 Ranks)';
+        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py)';
         codeArea.value = `from mpi4py import MPI\nimport numpy as np\n\ncomm = MPI.COMM_WORLD\nrank = comm.Get_rank()\nsize = comm.Get_size()\n\n# Scatter-Reduce\ndata = np.arange(100) if rank == 0 else None\nlocal_data = np.zeros(25)\ncomm.Scatter(data, local_data, root=0)\nlocal_sum = np.sum(local_data)\ntotal = comm.reduce(local_sum, op=MPI.SUM, root=0)\nif rank == 0:\n    print(f"[Rank 0] Total parallel sum: {total}")`;
       } else if (type === 'ring_token') {
-        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py - 4 Ranks)';
+        if (runtimeSel) runtimeSel.value = 'MPI (mpi4py)';
         codeArea.value = `from mpi4py import MPI\ncomm = MPI.COMM_WORLD\nrank = comm.Get_rank()\nsize = comm.Get_size()\n\n# Non-blocking ring token passing\ntoken = 42\nreq_recv = comm.irecv(source=(rank-1)%size, tag=11)\nreq_send = comm.isend(token, dest=(rank+1)%size, tag=11)\nprint(f"[Rank {rank}] Ring pass active (no deadlock)")`;
       } else if (type === 'sandbox_test') {
-        if (runtimeSel) runtimeSel.value = 'Python 3.12 (Standard)';
+        if (runtimeSel) runtimeSel.value = 'Python';
         codeArea.value = `# Uji Sandbox Timeout Protection\nimport time\nprint("Memulai proses berat...")\nwhile True:\n    pass # Akan dihentikan paksa setelah 5.0 detik`;
       }
 
